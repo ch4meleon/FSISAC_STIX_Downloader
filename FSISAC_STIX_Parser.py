@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-FSISAC STIX Parser
+FSISAC STIX Parser (FSISAC_STIX_Parser.py)
 Written by Michael Lim (ch4meleon@protonmail.com)
 
 """
@@ -89,6 +89,8 @@ class FSISAC_STIX_Parser:
     """ Extract observables from STIX """
     def extractObservables(self, indicators):
         values = []
+        STIX_TYPE = ""
+
         for indicator in indicators:
             
             # Check if we were passed a list of indicators, or observables
@@ -118,69 +120,108 @@ class FSISAC_STIX_Parser:
                     if "fsisac" in tmp_obs['idref']:
                         IS_FSISAC = True
 
-            try:
-                if 'object' in obs:
-                    self.extractObservable(obs["object"], values)
+            if IS_FSISAC == True:
+                STIX_TYPE = "type1"
+                # print "FOUND FSISAC"
 
-                elif 'observable_composition' in obs:
-                    for observable in obs["observable_composition"]["observables"]:
-                        if 'object' in observable:
-                            self.extractObservable(observable["object"], values )
+                #iocs = dict()
+                #title = "TESTING"
+                #iocs = {'title' : '', 'domain':[], 'ip':[], 'email':[], 'hash':[], 'url':[], 'hash':[], 'yara':[], 'other' : []}
 
-                else:
-                    print "EXCEPTION999"
+                title = indicator['title']
+                description = indicator["description"]
 
-                    if IS_FSISAC == True:
-                        print "FOUND FSISAC"
+                iocs = self.parse_indicators_from_description_string(description, title)
+                return (STIX_TYPE, iocs)
 
-                        description = indicator["description"]
-                        title = indicator["title"]
+                sys.exit(0)
 
-                        print "-" * 100
-                        print "INDICATOR:"
-                        print indicator
-                        print "-" * 100
+                #return iocs
 
-                        # raise Exception("BYEBYEBYE")
+            else:
+                try:
+                    STIX_TYPE = "other"
 
-                        iocs = self.parse_indicators_from_description_string(description)
-                        iocs['title'] = title
+                    if 'object' in obs:
+                        self.extractObservable(obs["object"], values)
 
-                        return iocs
+                    elif 'observable_composition' in obs:
+                        for observable in obs["observable_composition"]["observables"]:
+                            if 'object' in observable:
+                                self.extractObservable(observable["object"], values )
 
                     else:
+                        print "EXCEPTION999"
                         raise Exception("Unknown Object Type!! Please Investigate")
 
-            except:
-                print >> sys.stderr, "Could not handle observable/indicator:\n"
-                pprint.pprint( indicator, sys.stderr )
-                raise
+                        # if IS_FSISAC == True:
+                        #     print "FOUND FSISAC"
 
-        return values
+                        #     description = indicator["description"]
+                        #     title = indicator["title"]
+
+                        #     print "-" * 100
+                        #     print "INDICATOR:"
+                        #     print indicator
+                        #     print "-" * 100
+
+                        #     raise Exception("BYEBYEBYE")
+
+                        #     iocs = self.parse_indicators_from_description_string(description)
+                        #     iocs['title'] = title
+
+                        #     # return iocs
+
+                        # else:
+                        #     raise Exception("Unknown Object Type!! Please Investigate")
+
+                except:
+                    print >> sys.stderr, "Could not handle observable/indicator:\n"
+                    pprint.pprint( indicator, sys.stderr )
+                    raise
+
+            # print "=" * 100
+            # print "extractObservables - values:"
+            # print values
+            # print "=" * 100
+
+        return (STIX_TYPE, values)
 
 
     # Processes a STIX package dictionary
     def process_stix_dict(self, stix_dict):
         iocs = {'title' : '', 'domain':[], 'ip':[], 'email':[], 'hash':[], 'url':[], 'hash':[], 'yara':[], 'other' : []}
 
-        values = []
+        result = []
         key = ""
         value = ""
 
         """ Retrieve title """
         try:
             title = stix_dict['observables']['observables'][0]['title']
-            iocs['title'] = [title]
+            iocs['title'] = title
+
         except:
             # Do something if necessary
             pass
 
         if "observables" in stix_dict:
-            values.extend(self.extractObservables(stix_dict["observables"]["observables"]))
+            result.extend(self.extractObservables(stix_dict["observables"]["observables"]))
 
         if "indicators" in stix_dict:
-            values.extend(self.extractObservables(stix_dict["indicators"]))
-            #pass
+            result.extend(self.extractObservables(stix_dict["indicators"]))
+
+        # print "=" * 100
+        # print "VALUES2"
+        # print result
+        # print "=" * 100
+
+        stix_type = result[0]
+
+        if stix_type == "type1": # No need to process, already in IOC dict format
+            return result[1]
+
+        values = result[1]
 
         if len(values) > 0:
             for item in values:
@@ -224,14 +265,21 @@ class FSISAC_STIX_Parser:
                 except ValueError:
                     print >> sys.stderr, "Could not parse values.."
                     print >> sys.stderr, item
-                    raise 
+                    raise
+
+        # print "END" * 100
+        # print iocs
+        # print "END" * 100
                     
         return iocs
 
 
-    """ Extract IOC(s) from the DESCRIPTION string """
-    def parse_indicators_from_description_string(self, description_string):
-        iocs = {'title' : '', 'domain':[], 'ip':[], 'email':[], 'hash':[], 'url':[], 'hash':[], 'yara':[], 'other' : []}
+    """ Extract IOC(s) from the DESCRIPTION string (string type) """
+    def parse_indicators_from_description_string(self, description_string, title):
+
+        # print type(description_string)
+
+        iocs = {'title' : title, 'domain':[], 'ip':[], 'email':[], 'hash':[], 'url':[], 'hash':[], 'yara':[], 'other' : []}
         on9strings = {'[.]':'.', 'hxxp':'http', '[@]':'@'}
 
         # Convert the first STIXPackage dictionary into another STIXPackage via the from_dict() method.      
@@ -287,17 +335,17 @@ class FSISAC_STIX_Parser:
                     iocs['domain'] = list(set(iocs['domain']))
 
         # Extract hashes by their plugin
-        for hash_extracted in iocextract.extract_hashes(description):
+        for hash_extracted in iocextract.extract_hashes(description_string):
             iocs['hash'].append(hash_extracted)
             iocs['hash'] = list(set(iocs['hash']))
 
         # Extract Yara rule
-        for yara_extracted in iocextract.extract_yara_rules(description):
+        for yara_extracted in iocextract.extract_yara_rules(description_string):
             iocs['yara'].append(yara_extracted)
             iocs['yara'] = list(set(iocs['yara']))
 
         # Extract IP
-        for ip_extracted in iocextract.extract_ips(description, refang=True):
+        for ip_extracted in iocextract.extract_ips(description_string, refang=True):
             # Use regex to validate the IP format
             if re.match(r"\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b", ip_extracted):
                 iocs['ip'].append(ip_extracted)
@@ -322,9 +370,9 @@ class FSISAC_STIX_Parser:
         stix_dict = stix_package.to_dict()
 
         # Extract description from the indicator (suitable for indicator only)
-        print "-" * 100
-        print stix_dict
-        print "-" * 100
+        # print "-" * 100
+        # print stix_dict
+        # print "-" * 100
 
         description = stix_dict["indicators"][0]["description"]
 
@@ -387,9 +435,13 @@ class FSISAC_STIX_Parser:
 
         # Get title first
         title = ""
+
         for ioc in iocs:
             if ioc == "title":
-                title = iocs[ioc][0]
+                try:
+                    title = iocs[ioc]
+                except:
+                    pass
 
         l = []
         for ioc in iocs:
@@ -456,4 +508,4 @@ def test3():
 
 
 if __name__ == "__main__":
-    test2()
+    test3()
