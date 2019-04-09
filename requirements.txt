@@ -1,5 +1,5 @@
-libtaxii
-lxml
-dateutil
-pytz
-configobj
+libtaxii==1.1.112
+lxml==4.3.3
+python-dateutil==2.7.5
+pytz==2018.9
+configobj==5.0.6
