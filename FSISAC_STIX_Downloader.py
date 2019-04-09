@@ -34,6 +34,7 @@ FSISAC_KEY = config["FSISAC_KEY"]
 FSISAC_CERT = config["FSISAC_CERT"]
 FSISAC_STIX_DOWNLOADED_PATH = config["FSISAC_STIX_DOWNLOADED_PATH"]
 DOWNLOAD_INTERVAL_MINUTE = config["DOWNLOAD_INTERVAL_MINUTE"]
+FSISAC_JSON_OUTPUT_PATH = config['FSISAC_JSON_OUTPUT_PATH']
 
 
 def print_banner():
@@ -99,8 +100,8 @@ class FSISAC_STIX_Downloader:
 
         end = datetime.datetime(toyear, tomonth, today, tzinfo=pytz.UTC)
 
-        # start = datetime.datetime(2019, 3, 28, tzinfo=pytz.UTC)
-        # end = datetime.datetime(2019, 3, 29, tzinfo=pytz.UTC)
+        # start = datetime.datetime(2019, 4, 5, tzinfo=pytz.UTC)
+        # end = datetime.datetime(2019, 4, 5, tzinfo=pytz.UTC)
 
         # A TAXII poll can return a lot of data. For performance reasons, if the polling period spans multiple days,
         # only poll for one day at a time within the polling period.
@@ -134,8 +135,6 @@ class FSISAC_STIX_Downloader:
             # Increment to the next day in the specified date range.
             inc_start=inc_start+datetime.timedelta(days=1)
             inc_end=inc_end+datetime.timedelta(days=1)
-
-        self.process_stix_directory()
 
 
     """ Write hash value (SHA256) to hash.txt """
@@ -171,18 +170,24 @@ class FSISAC_STIX_Downloader:
         for one_file in stix_files:
             filename_only = os.path.basename(one_file)
 
-            # Process (include 'marking as done') stix files
-            # ...
-            
-            # ret = self.check_if_stix_processed(one_file)
+            # Process stix files
+            print ("[+] Process %s..." % (filename_only))
+            # FSISAC_JSON_OUTPUT_PATH
+            stixParser = FSISAC_STIX_Parser()
+            r = stixParser.parse_stix_file(one_file)
 
-            # if ret == False:
-            #     print "Processed %s" % filename_only
-            # else:
-            #     print "Skipped %s" % filename_only
+            # Write to JSON output directory
+            f = open(FSISAC_JSON_OUTPUT_PATH + "/json_" + filename_only.replace(".", "_") + "_" + str(random.randint(1000000000000000, 9999999999999999)) + ".json", "w+")
+            f.write(r)
+            f.close()
+
+            print ""            
 
             # Move file to the done directory
-            os.rename(one_file, STIX_DOWNLOADED_PATH + "/done/" + filename_only + "." + str(random.SystemRandom().randint(0, 16 ** 16)))
+            print ("[-] Moved file %s..." % (filename_only))
+            os.rename(one_file, STIX_DOWNLOADED_PATH + "/done/" + filename_only)
+
+            # time.sleep(1)
 
             processed_files_count += 1
 
@@ -195,6 +200,6 @@ if __name__ == "__main__":
 
     d = FSISAC_STIX_Downloader()
     d.process_fsisac_stix_for_today()
-    # d.process_stix_directory()
+    d.process_stix_directory()
 
     print "[Done!]"
