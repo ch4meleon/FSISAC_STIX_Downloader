@@ -248,15 +248,27 @@ class FSISAC_STIX_Parser:
                         # print 'Domain: %s' % ( d.netloc )
                         iocs['domain'].append(d.netloc)
 
-                    elif re.match("^(([a-z0-9]\-*[a-z0-9]*){1,63}\.?){1,255}$", item):
-                        # print 'Domain: %s' % ( item )
-                        iocs['domain'].append(item)                    
+                    # elif re.match("^(([a-z0-9]\-*[a-z0-9]*){1,63}\.){1,255}$", item):
+                    #     # print 'Domain: %s' % ( item )
+                    #     iocs['domain'].append(item)
 
                     elif re.match("^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d{1,5}$", item):
                         data = item.split(":")
                         #print data
                         # print 'IP Address: %s | Dest Port: %s' % ( data[0], data[1] )
                         iocs['ip'].append(data[0])
+
+                    elif re.match(r"^([a-fA-F\d]{32})$", item):
+                        # print 'Hash: %s' % ( item )
+                        iocs['hash'].append(item)
+
+                    elif re.match(r"^([a-fA-F\d]{40})$", item):
+                        # print 'Hash: %s' % ( item )
+                        iocs['hash'].append(item)
+
+                    elif re.match(r"^([a-fA-F\d]{64})$", item):
+                        # print 'Hash: %s' % ( item )
+                        iocs['hash'].append(item)
 
                     else:
                         # print 'Indicator: %s' % ( item )
