@@ -100,13 +100,7 @@ class FSISAC_STIX_Parser:
             # print("OBS:")
             # pprint.pprint(obs)
             # print("===========================")
-
-            # print ("")
-
-            # print("===========================")
-            # print("INDICATOR:")
-            # pprint.pprint(indicator)
-            # print("===========================")
+            # print("")
 
             if "observable" in indicator:
                 obs = indicator["observable"]
@@ -117,7 +111,7 @@ class FSISAC_STIX_Parser:
             if "observable" in indicator:
                 tmp_obs = indicator['observable']
                 if 'idref' in tmp_obs:
-                    if "fsisac" in tmp_obs['idref']:
+                    if "fsisac" or "NCCIC" in tmp_obs['idref']:
                         IS_FSISAC = True
 
             if IS_FSISAC == True:
@@ -152,6 +146,12 @@ class FSISAC_STIX_Parser:
 
                     else:
                         print "EXCEPTION999"
+
+                        print "-" * 100
+                        print "INDICATOR:"
+                        print indicator
+                        print "-" * 100
+
                         raise Exception("Unknown Object Type!! Please Investigate")
 
                         # if IS_FSISAC == True:
@@ -493,31 +493,31 @@ def test():
     print j
     
 
-def test2():
-    content = open(sys.argv[1]).read()
-    sio = StringIO(content)
+# def test2():
+#     content = open(sys.argv[1]).read()
+#     sio = StringIO(content)
 
-    stixParser = FSISAC_STIX_Parser()
-    iocs = stixParser._parse_indicators_from_stix_description(sio)
+#     stixParser = FSISAC_STIX_Parser()
+#     iocs = stixParser._parse_indicators_from_stix_description(sio)
 
-    j = stixParser.convert_to_json(iocs)
+#     j = stixParser.convert_to_json(iocs)
 
-    parsed = json.loads(j)
-    print(json.dumps(parsed, indent=4, sort_keys=True))
-
-
-def test3():
-    from glob import glob
-
-    stixParser = FSISAC_STIX_Parser()
-
-    stix_files = glob("tests/*.xml")
-    for s in stix_files:
-        print "Processing file...(%s)" % s
-        r = stixParser.parse_stix_file(s)
-        print (r)
-        print ""
+#     parsed = json.loads(j)
+#     print(json.dumps(parsed, indent=4, sort_keys=True))
 
 
-if __name__ == "__main__":
-    test3()
+# def test3():
+#     from glob import glob
+
+#     stixParser = FSISAC_STIX_Parser()
+
+#     stix_files = glob("stix_files/*.xml")
+#     for s in stix_files:
+#         print "Processing file...(%s)" % s
+#         r = stixParser.parse_stix_file(s)
+#         print (r)
+#         print ""
+
+
+# if __name__ == "__main__":
+#     test()
